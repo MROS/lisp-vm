@@ -40,8 +40,7 @@ fn split_program(program: &String) -> Vec<String> {
         } else if (c == ' ' || c == '\t' || c == '\n') && buf.len() > 0 {
             ret.push(buf);
             buf = String::new();
-        }
-        else {
+        } else if !(c == ' ' || c == '\t' || c == '\n') {
             buf.push(c);
         }
     }
@@ -87,6 +86,7 @@ fn lexer(program: &String) -> Vec<Token> {
     return buf;
 }
 
+#[derive(Debug, PartialEq)]
 enum Expression {
     // 基礎構造
     Let { variable: String, binding_value: Box<Expression>, value: Box<Expression> },
@@ -105,6 +105,8 @@ enum Expression {
     Sub(Box<Expression>, Box<Expression>),
     Mul(Box<Expression>, Box<Expression>),
     Div(Box<Expression>, Box<Expression>),
+    // 函式呼叫
+    Call(Box<Expression>, Box<Expression>),
 }
 
 fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, usize) {
@@ -140,6 +142,8 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
 
             let expression: Expression = match tokens[cur] {
                 Token::Let => {
+                    cur += 1;
+
                     assert_token(&tokens[cur], &Token::LeftBrace); cur += 1;
 
                     let (variable, _cur) = parse_one_expression(tokens, cur);
@@ -166,6 +170,8 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
 
                 },
                 Token::Lambda => {
+                    cur += 1;
+
                     assert_token(&tokens[cur], &Token::LeftBrace); cur += 1;
 
                     let (variable, _cur) = parse_one_expression(tokens, cur);
@@ -187,6 +193,8 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
                     }
                 },
                 Token::If => {
+                    cur += 1;
+
                     let (condition, _cur) = parse_one_expression(tokens, cur);
                     cur = _cur;
 
@@ -203,37 +211,54 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
                     }
                 },
                 Token::Equal => {
+                    cur += 1;
                     let (arg1, _cur) = parse_one_expression(tokens, cur);
                     let (arg2, _cur) = parse_one_expression(tokens, _cur);
                     cur = _cur;
                     Expression::Equal(Box::new(arg1), Box::new(arg2))
                 },
                 Token::Add => {
+                    cur += 1;
                     let (arg1, _cur) = parse_one_expression(tokens, cur);
                     let (arg2, _cur) = parse_one_expression(tokens, _cur);
                     cur = _cur;
                     Expression::Add(Box::new(arg1), Box::new(arg2))
                 },
                 Token::Sub => {
+                    cur += 1;
                     let (arg1, _cur) = parse_one_expression(tokens, cur);
                     let (arg2, _cur) = parse_one_expression(tokens, _cur);
                     cur = _cur;
                     Expression::Sub(Box::new(arg1), Box::new(arg2))
                 },
                 Token::Mul => {
+                    cur += 1;
                     let (arg1, _cur) = parse_one_expression(tokens, cur);
                     let (arg2, _cur) = parse_one_expression(tokens, _cur);
                     cur = _cur;
                     Expression::Mul(Box::new(arg1), Box::new(arg2))
                 },
                 Token::Div => {
+                    cur += 1;
                     let (arg1, _cur) = parse_one_expression(tokens, cur);
                     let (arg2, _cur) = parse_one_expression(tokens, _cur);
                     cur = _cur;
                     Expression::Div(Box::new(arg1), Box::new(arg2))
+                },
+                Token::LeftBrace => {
+                    let (function, _cur) = parse_one_expression(tokens, cur);
+                    let (arg, _cur) = parse_one_expression(tokens, _cur);
+                    cur = _cur;
+                    Expression::Call(Box::new(function), Box::new(arg))
+                },
+                Token::Variable(ref s) => {
+                    cur += 1;
+                    let (arg, _cur) = parse_one_expression(tokens, cur);
+                    cur = _cur;
+                    Expression::Call(Box::new(Expression::Variable(s.clone())), Box::new(arg))
                 }
                 _ => {
-                    panic!("語法分析錯誤，做掛號之後接 {:?}", tokens[cur])
+                    panic!("語法分析錯誤，左掛號之後接 {:?}", tokens[cur])
                 }
             };
 
@@ -259,11 +284,30 @@ fn parser(tokens: &Vec<Token>) -> Vec<Expression> {
     return buf;
 }
 
+// fn print_expression_tree(expression: &Expression) {
+//     fn print_with_level(expression: &Expression, level: u32) {
+//         match expression {
+//             Expression::If{ condition: condition, true_value: true_value, false_value: false_value } => {
+//                 condition
+//                 println!("{} {}", )
+//             }
+//         }
+//     } 
+ 
+//     print_with_level(expression, 0);
+// }
+
 fn show_process(program: &String) {
     let tokens = lexer(program);
     
-    for token in tokens {
+    for token in &tokens {
         println!("{:?}", token);
+    }
+
+    let expressions = parser(&tokens);
+
+    for expression in &expressions {
+        println!("{:?}", expression);
     }
 }
 
@@ -271,7 +315,12 @@ fn main() {
 
     // println!("{:?}", Token::Add);
     let program1 = "(let (a 1) (+ a 2))".to_string();
-
     show_process(&program1);
 
+    let program2 = "
+(let (f (lambda (a) (+ a 1)))
+    (let (g (lambda (a) (* a 2)))
+        (g (f 2))))
+".to_string();
+    show_process(&program2);
 }
