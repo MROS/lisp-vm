@@ -111,9 +111,9 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
     let mut cur = position;
 
     // TODO: 再加一個字串型別的變數，讓 panic 時輸出
-    let assert_token = |target: Token| {
-        if tokens[cur] != target {
-            panic!("語法分析錯誤，預期是 {:?} ，實際是 {:?}", target, tokens[cur]);
+    fn assert_token (token: &Token, target: &Token) {
+        if token != target {
+            panic!("語法分析錯誤，預期是 {:?} ，實際是 {:?}", target, token);
         }
     };
 
@@ -131,8 +131,8 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
         Token::Float(n) => {
             return (Expression::Float(n), cur + 1)
         },
-        Token::Variable(s) => {
-            return (Expression::Variable(s), cur + 1)
+        Token::Variable(ref s) => {
+            return (Expression::Variable(s.clone()), cur + 1)
         },
         // 複合表達式（需要）
         Token::LeftBrace => {
@@ -140,19 +140,23 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
 
             let expression: Expression = match tokens[cur] {
                 Token::Let => {
-                    assert_token(Token::LeftBrace); cur += 1;
+                    assert_token(&tokens[cur], &Token::LeftBrace); cur += 1;
 
-                    let (variable, cur) = parse_one_expression(tokens, cur);
+                    let (variable, _cur) = parse_one_expression(tokens, cur);
+                    cur = _cur;
+
                     let variable_s = match variable {
                         Expression::Variable(s) => s,
                         _ => panic!("語法分析錯誤，let 表達式之後不接變數")
                     };
 
-                    let (binding_value, cur) = parse_one_expression(tokens, cur);
+                    let (binding_value, _cur) = parse_one_expression(tokens, cur);
+                    cur = _cur;
 
-                    assert_token(Token::RightBrace); cur += 1;
+                    assert_token(&tokens[cur], &Token::RightBrace); cur += 1;
 
-                    let (value, cur) = parse_one_expression(tokens, cur);
+                    let (value, _cur) = parse_one_expression(tokens, cur);
+                    cur = _cur;
 
                     Expression::Let{
                         variable: variable_s,
@@ -162,17 +166,20 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
 
                 },
                 Token::Lambda => {
-                    assert_token(Token::LeftBrace); cur += 1;
+                    assert_token(&tokens[cur], &Token::LeftBrace); cur += 1;
 
-                    let (variable, cur) = parse_one_expression(tokens, cur);
+                    let (variable, _cur) = parse_one_expression(tokens, cur);
+                    cur = _cur;
+
                     let variable_s = match variable {
                         Expression::Variable(s) => s,
                         _ => panic!("語法分析錯誤，lambda 表達式之後不接變數")
                     };
                     
-                    assert_token(Token::RightBrace); cur += 1;
+                    assert_token(&tokens[cur], &Token::RightBrace); cur += 1;
 
-                    let (value, cur) = parse_one_expression(tokens, cur);
+                    let (value, _cur) = parse_one_expression(tokens, cur);
+                    cur = _cur;
 
                     Expression::Lambda{
                         variable: variable_s,
@@ -180,9 +187,15 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
                     }
                 },
                 Token::If => {
-                    let (condition, cur) = parse_one_expression(tokens, cur);
-                    let (true_vale, cur) = parse_one_expression(tokens, cur);
-                    let (false_value, cur) = parse_one_expression(tokens, cur);
+                    let (condition, _cur) = parse_one_expression(tokens, cur);
+                    cur = _cur;
+
+                    let (true_vale, _cur) = parse_one_expression(tokens, cur);
+                    cur = _cur;
+
+                    let (false_value, _cur) = parse_one_expression(tokens, cur);
+                    cur = _cur;
+
                     Expression::If{
                         condition: Box::new(condition),
                         true_value: Box::new(true_vale),
@@ -190,29 +203,37 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
                     }
                 },
                 Token::Equal => {
-                    let (arg1, cur) = parse_one_expression(tokens, cur);
-                    let (arg2, cur) = parse_one_expression(tokens, cur);
+                    let (arg1, _cur) = parse_one_expression(tokens, cur);
+                    let (arg2, _cur) = parse_one_expression(tokens, _cur);
+                    cur = _cur;
                     Expression::Equal(Box::new(arg1), Box::new(arg2))
                 },
                 Token::Add => {
-                    let (arg1, cur) = parse_one_expression(tokens, cur);
-                    let (arg2, cur) = parse_one_expression(tokens, cur);
+                    let (arg1, _cur) = parse_one_expression(tokens, cur);
+                    let (arg2, _cur) = parse_one_expression(tokens, _cur);
+                    cur = _cur;
                     Expression::Add(Box::new(arg1), Box::new(arg2))
                 },
                 Token::Sub => {
-                    let (arg1, cur) = parse_one_expression(tokens, cur);
-                    let (arg2, cur) = parse_one_expression(tokens, cur);
+                    let (arg1, _cur) = parse_one_expression(tokens, cur);
+                    let (arg2, _cur) = parse_one_expression(tokens, _cur);
+                    cur = _cur;
                     Expression::Sub(Box::new(arg1), Box::new(arg2))
                 },
                 Token::Mul => {
-                    let (arg1, cur) = parse_one_expression(tokens, cur);
-                    let (arg2, cur) = parse_one_expression(tokens, cur);
+                    let (arg1, _cur) = parse_one_expression(tokens, cur);
+                    let (arg2, _cur) = parse_one_expression(tokens, _cur);
+                    cur = _cur;
                     Expression::Mul(Box::new(arg1), Box::new(arg2))
                 },
                 Token::Div => {
-                    let (arg1, cur) = parse_one_expression(tokens, cur);
-                    let (arg2, cur) = parse_one_expression(tokens, cur);
+                    let (arg1, _cur) = parse_one_expression(tokens, cur);
+                    let (arg2, _cur) = parse_one_expression(tokens, _cur);
+                    cur = _cur;
                     Expression::Div(Box::new(arg1), Box::new(arg2))
+                }
+                _ => {
+                    panic!("語法分析錯誤，做掛號之後接 {:?}", tokens[cur])
                 }
             };
 
@@ -222,7 +243,7 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
                 return (expression, cur + 1);
             }
         },
-        _ => panic!("語法分析錯誤，表達式開頭不以左括號開頭，而是 {:?}", tokens[cur]);
+        _ => panic!("語法分析錯誤，表達式開頭不以左括號開頭，而是 {:?}", tokens[cur])
     }
 }
 
