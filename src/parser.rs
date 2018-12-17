@@ -1,6 +1,6 @@
 use lexer::{ Token };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     // 基礎構造
     Let { variable: String, binding_value: Box<Expression>, value: Box<Expression> },
@@ -11,8 +11,7 @@ pub enum Expression {
     // 基礎資料型別
     Int(i64),
     Float(f64), 
-    True,
-    False,
+    Bool(bool),
     // 運算子
     Equal(Box<Expression>, Box<Expression>),
     Add(Box<Expression>, Box<Expression>),
@@ -36,10 +35,10 @@ fn parse_one_expression(tokens: &Vec<Token>, position: usize) -> (Expression, us
     match tokens[cur] {
         // 基礎表達式
         Token::True => {
-            return (Expression::True, cur + 1)
+            return (Expression::Bool(true), cur + 1)
         },
         Token::False => {
-            return (Expression::False, cur + 1)
+            return (Expression::Bool(false), cur + 1)
         },
         Token::Int(n) => {
             return (Expression::Int(n), cur + 1)
